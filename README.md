@@ -1,84 +1,41 @@
 # TEGDA+
+---
+This is the official code for the extended journal version "TEGDA+: Test-time Evaluation-Guided Dynamic Adaptation for Medical Image Segmentation"
 
-This repository provides the code for the extended journal version **TEGDA+: Test-time Evaluation-Guided Dynamic Adaptation for Medical Image Segmentation**.
-
-TEGDA+ extends the original test-time evaluation-guided dynamic adaptation framework with an attention-enhanced feature bank and Fisher-guided selective restoration for more stable online adaptation in medical image segmentation.
+## To do
+- [x] TEGDA+ code is updated
 
 ## Overall Framework
-
 ![](pictures/pipeline.png)
 
-## Highlights
-
-- **ADIC-based quality estimation** evaluates prediction reliability at test time using dropout inference agreement calibrated by confidence.
-- **Prototype-pool feature refinement** stores high-confidence target-domain features and fuses them with the current sample through linear attention.
-- **Fisher-guided selective restoration** stabilizes adaptation by selectively restoring less important parameters toward the source model.
-- **2D and 3D support** is provided for M&Ms and BraTS-style medical image segmentation benchmarks.
-
-## Repository Structure
-
-```text
-code/
-  dataloaders/                         # BraTS and M&Ms dataloaders
-  networks/                            # 2D/3D segmentation networks
-  sota/
-    tegda_plus.py                      # TEGDA+ 3D test-time adaptation
-    tegda_plus_2d.py                   # TEGDA+ 2D test-time adaptation
-    adic.py, adic2d.py                # TEGDA+ quality estimation modules
-  train_fully_supervised_2D.py
-  train_fully_supervised_3D.py
-  test_time_adaptation_2D_online_eval.py
-  test_time_adaptation_3D_online_eval.py
-  run_tegda+.sh
-data/                                  # CSV splits; place preprocessed data here
-pictures/                              # Framework figures
-environment.yaml
-```
+Our contributions are summarized as follows:
+- We present a prediction quality evaluation metric based on **Agreement with Dropout Inferences calibrated by Confidence (ADIC)**, where the Dice score between predictions by the model and its dropout version is leveraged to assess the robustness of the model on a testing sample, then it is further calibrated by the confidence to become highly relevant to the real Dice value between the prediction and its ground-truth
+- We propose a **TEGDA+ feature refinement strategy** that maintains a prototype pool with high-confidence target-domain features and fuses them with the current testing sample through linear attention, leading to robust refined pseudo-labels.
+- We introduce a **Fisher-guided selective restoration strategy** to stabilize online test-time adaptation by selectively restoring less important parameters toward the source model while preserving task-relevant adaptation.
 
 ## Dataset
+Download the BraTS-GLI, BraTS-PED and BraTS-MEN datasets from [BraTS 2023](https://www.synapse.org/#!Synapse:syn51156910/wiki/), M&Ms datasets from [M&Ms](http://www.ub.edu/mnms). We also provided the preprocessed version for TEGDA+ at Google Drive: [BraTS 2023](https://drive.google.com/drive/folders/1PNGLAzZg336s7JrN1-Up4QTLLzOR0-6C?usp=sharing) and [M&Ms](https://drive.google.com/file/d/10qWKjURSEp1Acx7RZsBEmAb3gr9mNNPR/view?usp=sharing), please download and extract the .zip file to the corresponding folder and generate the .csv file according to your root dir.
 
-Download BraTS-GLI, BraTS-PED and BraTS-MEN from [BraTS 2023](https://www.synapse.org/#!Synapse:syn51156910/wiki/), and M&Ms from [M&Ms](http://www.ub.edu/mnms).
-
-Preprocessed data can be placed under the corresponding folders in `data/`. The CSV files in this repository provide the expected split format; update paths as needed for your local data root.
-
-## Environment
-
-```bash
+## How to use
+### Create the visual enviroment
+Use
+```
 conda env create -f environment.yaml
 conda activate TTA
 ```
-
-## Source Model Training
-
-```bash
+to setup the visual environment for the code.
+### Source model training
+Use
+```
 cd code
-python train_fully_supervised_2D.py    # M&Ms
-python train_fully_supervised_3D.py    # BraTS
+python train_fully_supervised_2D.py # For M&Ms dataset
+python train_fully_supervised_3D.py # For BraTS dataset
 ```
+to get the source model for two datasets.
 
-## Test-Time Adaptation
-
-Run the journal-version TEGDA+ adaptation examples:
-
-```bash
-cd code
-bash run_tegda+.sh
+### Test-time adaptation
+Use
 ```
-
-You can also launch a single experiment manually:
-
-```bash
-python test_time_adaptation_3D_online_eval.py \
-  --target_domain BraTS_PED \
-  --TTA_method tegda_plus \
-  --exp BraTs2023_GLI2PED_TEGDAplus
-
-python test_time_adaptation_2D_online_eval.py \
-  --target_domain B \
-  --TTA_method tegda_plus \
-  --exp MMS_A2B_TEGDAplus
+./run.sh
 ```
-
-## Citation
-
-The journal-version citation will be added after publication.
+to get the TEGDA+ test-time adaptation results on two datasets.
