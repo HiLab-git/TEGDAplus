@@ -87,7 +87,7 @@ def setup_TTA_model(base_model, TTA_method):
     elif TTA_method == "tegda":
         logging.info("test-time adaptation: tegda")
         model = setup_tegda(base_model)
-    elif TTA_method in ["tegda_plus", "tegda_attn"]:
+    elif TTA_method == "tegda_plus":
         logging.info("test-time adaptation: tegda+")
         model = setup_tegda_plus(base_model)
     elif TTA_method == "sitta":

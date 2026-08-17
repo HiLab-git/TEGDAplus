@@ -10,7 +10,7 @@ TEGDA+ extends the original test-time evaluation-guided dynamic adaptation frame
 
 ## Highlights
 
-- **ADIC/AETTA-based quality estimation** evaluates prediction reliability at test time using dropout inference agreement calibrated by confidence.
+- **ADIC-based quality estimation** evaluates prediction reliability at test time using dropout inference agreement calibrated by confidence.
 - **Prototype-pool feature refinement** stores high-confidence target-domain features and fuses them with the current sample through linear attention.
 - **Fisher-guided selective restoration** stabilizes adaptation by selectively restoring less important parameters toward the source model.
 - **2D and 3D support** is provided for M&Ms and BraTS-style medical image segmentation benchmarks.
@@ -22,9 +22,9 @@ code/
   dataloaders/                         # BraTS and M&Ms dataloaders
   networks/                            # 2D/3D segmentation networks
   sota/
-    tegda_attn.py                      # TEGDA+ 3D test-time adaptation
-    tegda_attn_2d.py                   # TEGDA+ 2D test-time adaptation
-    aetta.py, aetta2d.py               # TEGDA+ quality estimation modules
+    tegda_plus.py                      # TEGDA+ 3D test-time adaptation
+    tegda_plus_2d.py                   # TEGDA+ 2D test-time adaptation
+    adic.py, adic2d.py                # TEGDA+ quality estimation modules
   train_fully_supervised_2D.py
   train_fully_supervised_3D.py
   test_time_adaptation_2D_online_eval.py
@@ -78,8 +78,6 @@ python test_time_adaptation_2D_online_eval.py \
   --TTA_method tegda_plus \
   --exp MMS_A2B_TEGDAplus
 ```
-
-For compatibility with the implementation filenames, `--TTA_method tegda_attn` is also accepted by the 3D script, and `--TTA_method tegda_attn_2d` is accepted by the 2D script.
 
 ## Citation
 

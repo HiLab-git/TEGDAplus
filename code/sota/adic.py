@@ -86,15 +86,103 @@ class ADIC(nn.Module):
         ADIC_ET_dice = ET_weight*np.mean(ET_dice_list)
     
         return ADIC_WT_dice.item(),ADIC_TC_dice.item(),ADIC_ET_dice.item(), mismatch_mask, mean
+
+    def evaluate_dropout_with_stats(self, input, curr_pred, net, n_iter=10, dropout=0.5):
+        predictions = []
+        input = input.cuda().float()
+        for module in net.modules():
+            if isinstance(module,nn.Dropout):
+                module.train()
+        with torch.no_grad():
+            for _ in range(n_iter):
+                pred = net.forward_no_adapt(input)
+                pred = F.softmax(pred, dim=1)
+                predictions.append(pred)
+        predictions = torch.stack(predictions, dim=1)
+        pred = torch.argmax(predictions, dim=2)[0].cpu().numpy()
+        mean = torch.mean(predictions, dim=1)
+        
+        avg_pred = torch.argmax(mean,dim=1)[0].cpu().numpy()
+        mismatch_mask = (curr_pred != avg_pred)
+        
+        WT_weight = self.calculate_ent_weight(label_list=[1,2,3],pred=pred,alpha=1.0)
+        TC_weight = self.calculate_ent_weight(label_list=[2,3],pred=pred,alpha=1.0)
+        ET_weight = self.calculate_ent_weight(label_list=[3],pred=pred,alpha=1.0)
+        
+        WT_dice_list = []
+        TC_dice_list = []
+        ET_dice_list = []
+        for i in range(n_iter):
+            per_dropout_WT_dice = get_multi_class_evaluation_score(s_volume=pred[i],g_volume=curr_pred,label_list=[1,2,3],\
+                fuse_label=True,spacing=[1.0,1.0,1.0],metric='dice')[0]
+            per_dropout_TC_dice = get_multi_class_evaluation_score(s_volume=pred[i],g_volume=curr_pred,label_list=[2,3],\
+                fuse_label=True,spacing=[1.0,1.0,1.0],metric='dice')[0]
+            per_dropout_ET_dice = get_multi_class_evaluation_score(s_volume=pred[i],g_volume=curr_pred,label_list=[3],\
+                fuse_label=True,spacing=[1.0,1.0,1.0],metric='dice')[0]
+            WT_dice_list.append(per_dropout_WT_dice)
+            TC_dice_list.append(per_dropout_TC_dice)
+            ET_dice_list.append(per_dropout_ET_dice)
+        ADIC_WT_dice = WT_weight*np.mean(WT_dice_list)
+        ADIC_TC_dice = TC_weight*np.mean(TC_dice_list)
+        ADIC_ET_dice = ET_weight*np.mean(ET_dice_list)
+        est_avg_noweight = ((np.mean(WT_dice_list)+np.mean(TC_dice_list)+np.mean(ET_dice_list))/3)*100
+        
+        return ADIC_WT_dice.item(),ADIC_TC_dice.item(),ADIC_ET_dice.item(), mismatch_mask, predictions, mean, est_avg_noweight
+
+    def get_batch_acc(self, s, g, label_list):
+        correct_pixels = np.zeros(s.shape[0], dtype=np.float32)
+        total_pixels = s.shape[1] * s.shape[2] * s.shape[3]
+        
+        for lab in label_list:
+            s_sub = np.asarray(s == lab, np.uint8)
+            g_sub = np.asarray(g == lab, np.uint8)
+            
+            correct_pixels += np.sum(s_sub == g_sub, axis=(1, 2, 3))
+        
+        accuracy = correct_pixels / total_pixels
+        return accuracy
+    
+    def get_acc(self, predictions,curr_pred,entropy,n_iter=10):
+        pred = torch.argmax(predictions, dim=2).cpu().numpy()
+        WT_dice_list = []
+        TC_dice_list = []
+        ET_dice_list = []
+        for i in range(n_iter):
+            per_dropout_1_acc = self.get_batch_acc(s=pred[:,i],g = curr_pred,label_list = [1])
+            per_dropout_2_acc = self.get_batch_acc(s=pred[:,i],g=curr_pred,label_list = [2])
+            per_dropout_3_acc = self.get_batch_acc(s=pred[:,i],g=curr_pred,label_list = [3])
+            WT_dice_list.append(per_dropout_1_acc)
+            TC_dice_list.append(per_dropout_2_acc)
+            ET_dice_list.append(per_dropout_3_acc)
+        
+        acc = (np.mean(WT_dice_list)+np.mean(TC_dice_list)+np.mean(ET_dice_list))/3
+        
+        return acc
     
     
-    def ADIC(self, input, pred, model):
-        est_WT,est_TC,est_ET, mismatch_mask, pred_mean= self.evaluate_dropout(input, pred, model, dropout=0.4)
+    def ADIC(self, input, pred, model, multi_eval=False):
+        if multi_eval:
+            est_WT,est_TC,est_ET, mismatch_mask, predictions, pred_mean, est_avg_noweight = \
+                self.evaluate_dropout_with_stats(input, pred, model, dropout=0.4)
+        else:
+            est_WT,est_TC,est_ET, mismatch_mask, pred_mean = self.evaluate_dropout(input, pred, model, dropout=0.4)
         est_WT = round(est_WT*100,2)
         est_TC = round(est_TC*100,2)
         est_ET = round(est_ET*100,2)
         est_avg = round((est_WT+est_ET+est_TC)/3,2)
         
-        entropy = -np.sum(pred_mean.cpu().numpy()*np.log(pred_mean.cpu().numpy()+1e-10),axis=1).mean()
+        entropy = -np.sum(pred_mean.cpu().numpy()*np.log(pred_mean.cpu().numpy()+1e-10),axis=1)
+
+        if multi_eval:
+            entropy = entropy*mismatch_mask[:,:,:]
+            norm_entropy = (entropy - entropy.min()+1e-10) / (entropy.max() - entropy.min()+2e-10)
+            mean_norm_entropy = np.mean(norm_entropy)
+            
+            variance = (np.var(predictions.cpu().numpy(),axis=1)*mismatch_mask[:,:,:])
+            norm_variance = (variance - variance.min()) / (variance.max()-variance.min())
+            mean_norm_variance = norm_variance.mean()
+            
+            acc = self.get_acc(predictions,pred,mean_norm_entropy.mean())
+            return est_WT, est_TC, est_ET, est_avg, mismatch_mask, mean_norm_entropy, mean_norm_variance, acc, est_avg_noweight
         
-        return est_WT, est_TC, est_ET, est_avg, mismatch_mask, entropy
+        return est_WT, est_TC, est_ET, est_avg, mismatch_mask, entropy.mean()

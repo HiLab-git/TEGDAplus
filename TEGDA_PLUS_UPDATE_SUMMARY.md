@@ -82,8 +82,8 @@ def get_output_attn(self, x, bank_features, case_weight):
 ### 3. 使用 Selective Restore Fisher 替代全局 EMA
 
 **文件修改**:
-- `tegda_attn.py`: 添加 Fisher 相关函数，替换全局 EMA
-- `tegda_attn_2d.py`: 2D 版本相同更新
+- `tegda_plus.py`: 添加 Fisher 相关函数，替换全局 EMA
+- `tegda_plus_2d.py`: 2D 版本相同更新
 
 **新增函数**:
 
@@ -196,8 +196,8 @@ self.model_ema.main_decoder_1 = selective_restore_fisher(
 |-----|------|--------|
 | `unet_3D.py` | 修改 | 替换 cross_attention 为 linear_attention; 简化 get_output_attn |
 | `unet.py` | 修改 | 替换 cross_attention 为 linear_attention; 简化 get_output_attn (2D) |
-| `tegda_attn.py` | 修改 | 添加 Fisher 函数; 使用 selective_restore_fisher; 删除全局 EMA |
-| `tegda_attn_2d.py` | 修改 | 添加 Fisher 函数; 使用 selective_restore_fisher (2D) |
+| `tegda_plus.py` | 修改 | 添加 Fisher 函数; 使用 selective_restore_fisher; 删除全局 EMA |
+| `tegda_plus_2d.py` | 修改 | 添加 Fisher 函数; 使用 selective_restore_fisher (2D) |
 
 ---
 
@@ -221,8 +221,8 @@ self.model_ema.main_decoder_1 = selective_restore_fisher(
 ---
 
 ## 参考实现
-所有实现严格参考 TTA4MIS 的 tegda_attn.py:
-- `/mnt/data1/ZhouFF/TTA4MIS/code/sota/tegda_attn.py`
+所有实现严格参考 TTA4MIS 的 tegda_plus.py:
+- `/mnt/data1/ZhouFF/TTA4MIS/code/sota/tegda_plus.py`
 - `/mnt/data1/ZhouFF/TTA4MIS/code/networks/unet_3D.py`
 
 ---

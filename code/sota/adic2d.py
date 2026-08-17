@@ -163,8 +163,9 @@ class ADIC(nn.Module):
         est_WT,est_TC,est_ET,est_avg, mismatch_mask, predictions, pred_mean, est_avg_noweight,est_avg_weight_inv \
             = self.evaluate_dropout(input, pred, model, dropout=0.4)
 
+        entropy = -np.sum(pred_mean.cpu().numpy()*np.log(pred_mean.cpu().numpy()+1e-10),axis=1)
+
         if(multi_eval):
-            entropy = -np.sum(pred_mean.cpu().numpy()*np.log(pred_mean.cpu().numpy()+1e-10),axis=1)
             norm_entropy = (entropy - entropy.min()) / (entropy.max() - entropy.min())
             mean_norm_entropy = np.mean(norm_entropy,axis=(1,2))
             

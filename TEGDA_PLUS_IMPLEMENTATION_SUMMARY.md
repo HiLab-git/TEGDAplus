@@ -5,26 +5,26 @@ Successfully implemented TEGDA+ (attention-enhanced TEGDA) test-time adaptation 
 
 ## Files Created
 
-### 1. `/mnt/data1/ZhouFF/TEGDA/code/sota/aetta.py` (173 lines)
+### 1. `/mnt/data1/ZhouFF/TEGDA/code/sota/adic.py` (173 lines)
 **Purpose**: 3D Adaptive Entropy Test-Time Adaptation module
 **Key Components**:
-- `AETTA` class: Entropy-based confidence estimation for 3D medical images
+- `ADIC` class: Entropy-based confidence estimation for 3D medical images
 - `calculate_ent_weight()`: Computes class-wise entropy scores
-- `evaluate_dropout_2()`: Performs Monte Carlo dropout sampling (10 iterations) to assess prediction confidence
-- `aetta()`: Main method returning (est_WT, est_TC, est_ET, est_avg, mismatch_mask, entropy) tuples
+- `evaluate_dropout()`: Performs Monte Carlo dropout sampling (10 iterations) to assess prediction confidence
+- `ADIC()`: Main method returning (est_WT, est_TC, est_ET, est_avg, mismatch_mask, entropy) tuples
 
-**Source**: Directly copied from `/mnt/data1/ZhouFF/TTA4MIS/code/sota/aetta.py`
+**Source**: Directly copied from `/mnt/data1/ZhouFF/TTA4MIS/code/sota/adic.py`
 
-### 2. `/mnt/data1/ZhouFF/TEGDA/code/sota/aetta2d.py` (~240 lines)
-**Purpose**: 2D variant of AETTA for 2D medical image segmentation
+### 2. `/mnt/data1/ZhouFF/TEGDA/code/sota/adic2d.py` (~240 lines)
+**Purpose**: 2D variant of ADIC for 2D medical image segmentation
 **Key Differences from 3D**:
 - Axis adjustments: (1,2) for H,W instead of (0,2,3,4) for D,H,W
 - Batch Dice computation adapted for 2D
-- Multiple evaluation methods: `aetta()`, `aetta_prostate()`, `aetta_riga()`
+- Multiple evaluation methods: `ADIC()`, `ADIC_prostate()`, `ADIC_riga()`
 
-**Source**: Directly copied from `/mnt/data1/ZhouFF/TTA4MIS/code/sota/aetta2d.py`
+**Source**: Directly copied from `/mnt/data1/ZhouFF/TTA4MIS/code/sota/adic2d.py`
 
-### 3. `/mnt/data1/ZhouFF/TEGDA/code/sota/tegda_attn.py` (145 lines)
+### 3. `/mnt/data1/ZhouFF/TEGDA/code/sota/tegda_plus.py` (145 lines)
 **Purpose**: 3D TEGDA+ test-time adaptation with attention mechanisms
 **Key Components**:
 - `cross_attention()`: Parameter-free scaled dot-product attention
@@ -36,16 +36,16 @@ Successfully implemented TEGDA+ (attention-enhanced TEGDA) test-time adaptation 
 
 **Adaptation Strategy**:
 1. Extract encoder features and predictions
-2. Calculate confidence scores using AETTA
+2. Calculate confidence scores using ADIC
 3. Update feature pool with high-confidence samples (90th percentile threshold)
 4. Apply cross-attention to get attention-enhanced outputs
 5. Compute combined loss: ce_loss + sem_loss (weighted by confidence)
 6. Update EMA teacher model
 
-### 4. `/mnt/data1/ZhouFF/TEGDA/code/sota/tegda_attn_2d.py` (~145 lines)
+### 4. `/mnt/data1/ZhouFF/TEGDA/code/sota/tegda_plus_2d.py` (~145 lines)
 **Purpose**: 2D variant of TEGDA+ for 2D medical image segmentation
 **Key Differences from 3D**:
-- Prototype_Pool with scale_num=5 (instead of 6)
+- Prototype_Pool stores the 2D latent feature used by `get_output_attn()`
 - 2D-specific entropy computation (no depth dimension)
 - Adapted get_output_attn handling for 2D tensors
 
@@ -105,7 +105,7 @@ scale_case_weight = case_weight + ((scale_number - 1 - scale_idx) / (scale_numbe
 ### Feature Pool Management
 - **Max length**: 10 features per scale
 - **Update criterion**: 90th percentile of confidence scores
-- **Structure**: List[List[torch.Tensor]] - 6 (3D) or 5 (2D) scales with variable-length feature banks
+- **Structure**: 3D stores multi-scale encoder features; 2D stores the latent feature consumed by `get_output_attn()`
 
 ### Loss Computation
 ```
@@ -118,25 +118,25 @@ total_loss = ce_loss + sem_loss
 
 ### Required for Deployment
 1. **Test scripts** (`test_time_adaptation_3D_online_eval.py`, `test_time_adaptation_2D_online_eval.py`):
-   - Add 'tegda_attn' and 'tegda_attn_2d' to method lists in `setup_TTA_model()`
+   - Add 'tegda_plus' to method lists in `setup_TTA_model()`
    
 2. **Import statements** needed:
-   - `from sota.tegda_attn import TTA as TTA_attn_3D`
-   - `from sota.tegda_attn_2d import TTA as TTA_attn_2D`
+   - `from sota.tegda_plus import TTA as TTA_plus_3D`
+   - `from sota.tegda_plus_2d import TTA as TTA_plus_2D`
 
 3. **Configuration** in test scripts:
    ```python
-   if method == 'tegda_attn':
-       model = TTA_attn_3D(model, anchor_model, optimizer)
-   elif method == 'tegda_attn_2d':
-       model = TTA_attn_2D(model, anchor_model, optimizer)
+   if method == 'tegda_plus':
+       model = TTA_plus_3D(model, anchor_model, optimizer)
+   elif method == 'tegda_plus':
+       model = TTA_plus_2D(model, anchor_model, optimizer)
    ```
 
 ## Compatibility
 
 ### Preserved
 - ✅ Existing TEGDA base functionality
-- ✅ AETTA confidence estimation modules
+- ✅ ADIC confidence estimation modules
 - ✅ Original test-time adaptation pipeline
 - ✅ All existing test scripts (no breaking changes)
 
@@ -176,7 +176,7 @@ total_loss = ce_loss + sem_loss
 ## Code Statistics
 
 - **Files Created**: 4
-  - 2 AETTA modules (173 + 240 lines)
+  - 2 ADIC modules (173 + 240 lines)
   - 2 TTA modules (145 + 145 lines)
   - Total: ~703 lines
   
@@ -187,7 +187,7 @@ total_loss = ce_loss + sem_loss
 
 ## References
 
-**Source Implementation**: `/mnt/data1/ZhouFF/TTA4MIS/code/sota/tegda_attn.py`
+**Source Implementation**: `/mnt/data1/ZhouFF/TTA4MIS/code/sota/tegda_plus.py`
 - Adapted from TTA4MIS repository to TEGDA codebase
 - Key changes: Removed 'loc' parameter support, simplified class-specific pools
 - Maintained core functionality: entropy-driven adaptation + cross-attention

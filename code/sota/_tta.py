@@ -12,7 +12,7 @@ from sota import norm
 from sota import cotta
 from sota import meant
 from sota import tegda
-from sota import tegda_attn
+from sota import tegda_plus
 from sota import sar
 from sota import sitta
 from sota import vptta
@@ -120,7 +120,7 @@ def setup_tegda(model):
 def setup_tegda_plus(model):
     anchor_model = deepcopy(model)
     optimizer = torch.optim.Adam(model.parameters(),lr=0.00001,betas=(0.5,0.999))
-    mt_model = tegda_attn.TTA(model, anchor_model, optimizer)
+    mt_model = tegda_plus.TTA(model, anchor_model, optimizer)
     return mt_model
 
 

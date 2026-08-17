@@ -8,7 +8,7 @@ from monai.losses import DiceCELoss
 import numpy as np
 from collections import defaultdict
 import re
-from sota.aetta import AETTA
+from sota.adic import ADIC
 
 dicece_loss = DiceCELoss(4)
 
@@ -105,7 +105,7 @@ class TTA(nn.Module):
         self.pool = Prototype_Pool(class_num=4, max=10)
         for param in self.source_model.parameters():
             param.requires_grad = False
-        self.est = AETTA()
+        self.est = ADIC()
         self.est_list = []
 
     def forward(self, x):
@@ -130,9 +130,9 @@ class TTA(nn.Module):
         eval_model = deepcopy(model)
         
         if multi_eval:
-            est_1, est_2, est_3, est_avg, mismatch_mask, entropy, var, acc = self.est.aetta(input=x, pred=pred, model=eval_model, multi_eval=multi_eval)
+            est_1, est_2, est_3, est_avg, mismatch_mask, entropy, var, acc, _ = self.est.ADIC(input=x, pred=pred, model=eval_model, multi_eval=multi_eval)
         else:
-            est_1, est_2, est_3, est_avg, mismatch_mask, entropy = self.est.aetta(input=x, pred=pred, model=eval_model, multi_eval=multi_eval)
+            est_1, est_2, est_3, est_avg, mismatch_mask, entropy = self.est.ADIC(input=x, pred=pred, model=eval_model, multi_eval=multi_eval)
         
         est_avg = np.array([est_avg])
         self.est_list.extend(est_avg)

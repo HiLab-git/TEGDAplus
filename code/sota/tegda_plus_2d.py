@@ -8,7 +8,7 @@ from monai.losses import DiceCELoss
 import numpy as np
 from collections import defaultdict
 import re
-from sota.aetta2d import AETTA
+from sota.adic2d import ADIC
 
 dicece_loss = DiceCELoss(4)
 
@@ -64,7 +64,7 @@ def selective_restore_fisher(ema_model, source_model, fisher, revert_ratio=0.1):
     return ema_model
 
 class Prototype_Pool(nn.Module):
-    def __init__(self, class_num=4, max=50, scale_num=5):
+    def __init__(self, class_num=4, max=50, scale_num=1):
         super(Prototype_Pool, self).__init__()
         self.class_num = class_num
         self.max_length = max
@@ -77,16 +77,15 @@ class Prototype_Pool(nn.Module):
         return self.feature_bank
     
     def update_feature_pool(self, feature, feat_idx):
-        for scale_idx in range(len(feature)):
-            current_feat = feature[scale_idx][feat_idx].detach()
-            if len(self.feature_bank[scale_idx]) == 0:
-                self.feature_bank[scale_idx] = current_feat.unsqueeze(0)
-            else:
-                updated_pool = torch.cat([self.feature_bank[scale_idx], current_feat.unsqueeze(0)], dim=0)
-                if updated_pool.size(0) > self.max_length:
-                    updated_pool = updated_pool[-self.max_length:]
-                
-                self.feature_bank[scale_idx] = updated_pool
+        current_feat = feature[feat_idx].detach()
+        if len(self.feature_bank[-1]) == 0:
+            self.feature_bank[-1] = current_feat.unsqueeze(0)
+        else:
+            updated_pool = torch.cat([self.feature_bank[-1], current_feat.unsqueeze(0)], dim=0)
+            if updated_pool.size(0) > self.max_length:
+                updated_pool = updated_pool[-self.max_length:]
+            
+            self.feature_bank[-1] = updated_pool
 
 class TTA(nn.Module):
     """TEGDA+ 2D variant with attention mechanism for test-time adaptation"""
@@ -102,10 +101,10 @@ class TTA(nn.Module):
         self.rst = rst_m
         self.model = model
         self.source_model = deepcopy(model)
-        self.pool = Prototype_Pool(class_num=4, max=10, scale_num=5)
+        self.pool = Prototype_Pool(class_num=4, max=10)
         for param in self.source_model.parameters():
             param.requires_grad = False
-        self.est = AETTA()
+        self.est = ADIC()
         self.est_list = []
 
     def forward(self, x):
@@ -130,9 +129,10 @@ class TTA(nn.Module):
         eval_model = deepcopy(model)
         
         if multi_eval:
-            est_1, est_2, est_3, est_avg, mismatch_mask, entropy, var, acc = self.est.aetta(input=x, pred=pred, model=eval_model, multi_eval=multi_eval)
+            est_1, est_2, est_3, est_avg, mismatch_mask, entropy, var, acc = self.est.ADIC(input=x, pred=pred, model=eval_model, multi_eval=multi_eval)
         else:
-            est_1, est_2, est_3, est_avg, mismatch_mask, entropy = self.est.aetta(input=x, pred=pred, model=eval_model, multi_eval=multi_eval)
+            est_1, est_2, est_3, est_avg, mismatch_mask = self.est.ADIC(input=x, pred=pred, model=eval_model, multi_eval=multi_eval)
+            entropy = None
         
         est_avg = np.array([est_avg])
         self.est_list.extend(est_avg)
