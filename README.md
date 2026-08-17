@@ -2,9 +2,6 @@
 ---
 This is the official code for the extended journal version "TEGDA+: Test-time Evaluation-Guided Dynamic Adaptation for Medical Image Segmentation"
 
-## To do
-- [x] TEGDA+ code is updated
-
 ## Overall Framework
 ![](pictures/pipeline.png)
 
@@ -36,6 +33,6 @@ to get the source model for two datasets.
 ### Test-time adaptation
 Use
 ```
-./run.sh
+./run_tegda+.sh
 ```
 to get the TEGDA+ test-time adaptation results on two datasets.
